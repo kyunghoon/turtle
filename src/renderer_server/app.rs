@@ -8,7 +8,7 @@ use super::renderer::display_list::PrimHandle;
 
 /// The unique ID of a particular turtle
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TurtleId(usize);
+pub struct TurtleId(pub usize);
 
 #[derive(Default, Debug)]
 pub struct TurtleDrawings {

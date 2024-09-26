@@ -82,8 +82,8 @@ broken unless you do so. See [Unstable features](#unstable-features) below for m
 #![doc(html_logo_url = "https://raw.githubusercontent.com/sunjay/turtle/master/docs/assets/images/turtle-logo-512.png")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(all(test, not(feature = "test")))]
-compile_error!("Make sure you run tests with `cargo test --features \"test unstable\"`");
+//#[cfg(all(test, not(feature = "test")))]
+//compile_error!("Make sure you run tests with `cargo test --features \"test unstable\"`");
 
 mod radians;
 mod point;
@@ -101,15 +101,18 @@ mod debug;
 mod drawing;
 mod turtle;
 
-pub use crate::color::Color;
-pub use crate::color::colors;
-pub use crate::async_drawing::Size;
-pub use crate::drawing::Drawing;
-pub use crate::point::Point;
-pub use crate::speed::Speed;
-pub use crate::async_turtle::{Angle, Distance};
+use crate::color::Color;
+use crate::color::colors;
+use crate::async_drawing::Size;
+use crate::drawing::Drawing;
+use crate::point::Point;
+use crate::speed::Speed;
+use crate::async_turtle::{Angle, Distance};
 pub use crate::turtle::Turtle;
-pub use crate::renderer_server::{ExportError, start};
+use crate::renderer_server::{ExportError, start};
+pub use crate::renderer_server::TurtleId;
+pub use crate::renderer_client::RendererClient;
+pub use crate::ipc_protocol::{ClientRequest, ServerResponse};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "unstable")] {

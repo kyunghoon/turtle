@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::ipc_protocol::ProtocolClient;
 use crate::async_turtle::AsyncTurtle;
+use crate::renderer_client::RendererClient;
 use crate::{Drawing, Point, Color, Event, ExportError};
 
 /// Represents a size
@@ -54,34 +55,34 @@ impl From<[u32; 2]> for Size {
     }
 }
 
-pub struct AsyncDrawing {
-    client: ProtocolClient,
+pub struct AsyncDrawing<R: RendererClient> {
+    client: ProtocolClient<R>,
 }
 
-impl From<Drawing> for AsyncDrawing {
-    fn from(drawing: Drawing) -> Self {
+impl<R: RendererClient> From<Drawing<R>> for AsyncDrawing<R> {
+    fn from(drawing: Drawing<R>) -> Self {
         drawing.into_async()
     }
 }
 
-impl AsyncDrawing {
-    pub async fn new() -> Self {
+impl<R: RendererClient> AsyncDrawing<R> {
+    pub async fn new(client: R) -> Self {
         // This needs to be called as close to the start of the program as possible. We call it
         // here since Drawing::new() or AsyncDrawing::new() are commonly called at the beginning
         // of many programs that use the turtle crate.
         crate::start();
 
-        let client = ProtocolClient::new().await
+        let client = ProtocolClient::new(client).await
             .expect("unable to create renderer client");
         Self {client}
     }
 
-    pub async fn add_turtle(&mut self) -> AsyncTurtle {
+    pub async fn add_turtle(&mut self) -> AsyncTurtle<R> {
         let client = self.client.split().await;
         AsyncTurtle::with_client(client).await
     }
 
-    pub fn into_sync(self) -> Drawing {
+    pub fn into_sync(self) -> Drawing<R> {
         self.into()
     }
 

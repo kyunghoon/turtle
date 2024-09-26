@@ -1,6 +1,7 @@
 use std::fmt::{self, Debug};
 use std::path::Path;
 
+use crate::renderer_client::RendererClient;
 use crate::{Turtle, Color, Point, Size, ExportError};
 use crate::async_drawing::AsyncDrawing;
 use crate::sync_runtime::block_on;
@@ -53,28 +54,28 @@ use crate::sync_runtime::block_on;
 /// [`Drawing`]: struct.Drawing.html
 /// [`Drawing::new()`]: struct.Drawing.html#method.new
 /// [`add_turtle()`]: struct.Drawing.html#method.add_turtle
-pub struct Drawing {
-    drawing: AsyncDrawing,
+pub struct Drawing<R: RendererClient> {
+    drawing: AsyncDrawing<R>,
     //TODO: Remove this field when multiple turtles are supported
     turtles: usize,
 }
 
-impl Debug for Drawing {
+impl<R: RendererClient> Debug for Drawing<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let state = block_on(self.drawing.debug());
         Debug::fmt(&state, f)
     }
 }
 
-impl From<AsyncDrawing> for Drawing {
-    fn from(drawing: AsyncDrawing) -> Self {
+impl<R: RendererClient> From<AsyncDrawing<R>> for Drawing<R> {
+    fn from(drawing: AsyncDrawing<R>) -> Self {
         //TODO: There is no way to set `turtles` properly here, but that's okay since it is going
         // to be removed soon.
         Self {drawing, turtles: 1}
     }
 }
 
-impl Drawing {
+impl<R: RendererClient> Drawing<R> {
     /// Creates a new drawing
     ///
     /// This will immediately open a new window with a completely blank image.
@@ -82,7 +83,7 @@ impl Drawing {
     /// To create a new turtle in the image, use the [`add_turtle()`] method.
     ///
     /// [`add_turtle()`]: struct.Drawing.html#method.add_turtle
-    pub fn new() -> Drawing {
+    pub fn new(client: R) -> Drawing<R> {
         // This needs to be called as close to the start of the program as possible. We call it
         // here since Drawing::new() or AsyncDrawing::new() are commonly called at the beginning
         // of many programs that use the turtle crate.
@@ -90,7 +91,7 @@ impl Drawing {
         crate::start();
 
         Drawing {
-            drawing: block_on(AsyncDrawing::new()),
+            drawing: block_on(AsyncDrawing::new(client)),
             turtles: 0,
         }
     }
@@ -121,7 +122,7 @@ impl Drawing {
     ///     turtle.right(1.0);
     /// }
     /// ```
-    pub fn add_turtle(&mut self) -> Turtle {
+    pub fn add_turtle(&mut self) -> Turtle<R> {
         #[cfg(not(feature = "unstable"))]
         assert!(self.turtles == 0, "Multiple turtles are unstable! Only call `add_turtle` once.");
         self.turtles += 1;
@@ -129,7 +130,7 @@ impl Drawing {
         block_on(self.drawing.add_turtle()).into()
     }
 
-    pub(crate) fn into_async(self) -> AsyncDrawing {
+    pub(crate) fn into_async(self) -> AsyncDrawing<R> {
         self.drawing
     }
 
@@ -662,7 +663,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid color: Color { red: NaN, green: 0.0, blue: 0.0, alpha: 0.0 }. See the color module documentation for more information.")]
     fn rejects_invalid_background_color() {
-        let mut drawing = Drawing::new();
+        let client = block_on(DefaultRendererClient::new()).unwrap();
+        let mut drawing = Drawing::new(client);
         drawing.set_background_color(Color {
             red: ::std::f64::NAN,
             green: 0.0,
@@ -674,7 +676,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "The size of the drawing must be non-zero")]
     fn rejects_size_zero() {
-        let mut drawing = Drawing::new();
+        let client = block_on(DefaultRendererClient::new()).unwrap();
+        let mut drawing = Drawing::new(client);
 
         drawing.set_size([0, 0]);
     }
@@ -683,7 +686,8 @@ mod tests {
     fn ignores_center_nan_inf() {
         let center = Point {x: 5.0, y: 10.0};
 
-        let mut drawing = Drawing::new();
+        let client = block_on(DefaultRendererClient::new()).unwrap();
+        let mut drawing = Drawing::new(client);
         drawing.set_center(center);
 
         drawing.set_center([::std::f64::NAN, 0.0]);

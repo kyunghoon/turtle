@@ -1,5 +1,6 @@
 use std::fmt::{self, Debug};
 
+use crate::renderer_client::RendererClient;
 use crate::{Color, Point, Speed, Distance, Angle};
 use crate::async_turtle::AsyncTurtle;
 use crate::sync_runtime::block_on;
@@ -14,30 +15,24 @@ use crate::sync_runtime::block_on;
 ///
 /// See the documentation for the methods below to learn about the different drawing commands you
 /// can use with the turtle.
-pub struct Turtle {
-    turtle: AsyncTurtle,
+pub struct Turtle<R: RendererClient> {
+    turtle: AsyncTurtle<R>,
 }
 
-impl Debug for Turtle {
+impl<R: RendererClient> Debug for Turtle<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let state = block_on(self.turtle.debug());
         Debug::fmt(&state, f)
     }
 }
 
-impl Default for Turtle {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl From<AsyncTurtle> for Turtle {
-    fn from(turtle: AsyncTurtle) -> Self {
+impl<R: RendererClient> From<AsyncTurtle<R>> for Turtle<R> {
+    fn from(turtle: AsyncTurtle<R>) -> Self {
         Self {turtle}
     }
 }
 
-impl Turtle {
+impl<R: RendererClient> Turtle<R> {
     /// Create a new turtle.
     ///
     /// This will immediately open a new window with the turtle at the center. As each line in
@@ -55,7 +50,7 @@ impl Turtle {
     ///
     /// **Note:** If you do not create the `Turtle` right at the beginning of `main()`, call
     /// [`turtle::start()`](fn.start.html) in order to avoid any problems.
-    pub fn new() -> Turtle {
+    pub fn new(client: R) -> Turtle<R> {
         // This needs to be called as close to the start of the program as possible. We call it
         // here since Turtle::new() or AsyncTurtle::new() are commonly called at the beginning
         // of many programs that use the turtle crate.
@@ -63,7 +58,7 @@ impl Turtle {
         crate::start();
 
         Turtle {
-            turtle: block_on(AsyncTurtle::new()),
+            turtle: block_on(AsyncTurtle::new(client)),
         }
     }
 
@@ -318,7 +313,7 @@ impl Turtle {
         block_on(self.turtle.arc_right(radius, extent))
     }
 
-    pub(crate) fn into_async(self) -> AsyncTurtle {
+    pub(crate) fn into_async(self) -> AsyncTurtle<R> {
         self.turtle
     }
 
@@ -1016,8 +1011,9 @@ mod tests {
 
     #[test]
     fn is_using_radians_degrees() {
+        let client = DefaultRendererClient::new();
         // is_using_radians and is_using_degrees should be inverses of each other
-        let mut turtle = Turtle::new();
+        let mut turtle = Turtle::new(client);
         assert!(!turtle.is_using_radians());
         assert!(turtle.is_using_degrees());
         turtle.use_radians();
@@ -1030,7 +1026,8 @@ mod tests {
 
     #[test]
     fn clear_leaves_position_and_heading() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         assert_eq!(turtle.position(), Point::origin());
         assert!((turtle.heading() - 90.0).abs() < f64::EPSILON);
         turtle.forward(100.0);
@@ -1043,7 +1040,8 @@ mod tests {
 
     #[test]
     fn turn_towards() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
 
         // Turn from each cardinal direction to each cardinal direction
         for n in 0..16 as u32 {
@@ -1062,35 +1060,40 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid thickness: -10. The pen thickness must be greater than or equal to zero")]
     fn set_pen_size_rejects_negative() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         turtle.set_pen_size(-10.0);
     }
 
     #[test]
     #[should_panic(expected = "Invalid thickness: NaN. The pen thickness must be greater than or equal to zero")]
     fn set_pen_size_rejects_nan() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         turtle.set_pen_size(::std::f64::NAN);
     }
 
     #[test]
     #[should_panic(expected = "Invalid thickness: inf. The pen thickness must be greater than or equal to zero")]
     fn set_pen_size_rejects_inf() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         turtle.set_pen_size(::std::f64::INFINITY);
     }
 
     #[test]
     #[should_panic(expected = "Invalid thickness: -inf. The pen thickness must be greater than or equal to zero")]
     fn set_pen_size_rejects_neg_inf() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         turtle.set_pen_size(-::std::f64::INFINITY);
     }
 
     #[test]
     #[should_panic(expected = "Invalid color: Color { red: NaN, green: 0.0, blue: 0.0, alpha: 0.0 }. See the color module documentation for more information.")]
     fn rejects_invalid_pen_color() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         turtle.set_pen_color(Color {
             red: ::std::f64::NAN,
             green: 0.0,
@@ -1102,7 +1105,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid color: Color { red: NaN, green: 0.0, blue: 0.0, alpha: 0.0 }. See the color module documentation for more information.")]
     fn rejects_invalid_fill_color() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
         turtle.set_fill_color(Color {
             red: ::std::f64::NAN,
             green: 0.0,
@@ -1113,7 +1117,8 @@ mod tests {
 
     #[test]
     fn ignores_nan_inf_zero() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
 
         let default_position = turtle.position();
         let default_heading = turtle.heading();
@@ -1192,7 +1197,8 @@ mod tests {
 
     #[test]
     fn ignores_nan_inf() {
-        let mut turtle = Turtle::new();
+        let client = DefaultRendererClient::new();
+        let mut turtle = Turtle::new(client);
 
         let default_position = turtle.position();
         let default_heading = turtle.heading();

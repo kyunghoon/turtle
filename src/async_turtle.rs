@@ -4,6 +4,7 @@ use tokio::time;
 
 use crate::radians::{self, Radians};
 use crate::ipc_protocol::{ProtocolClient, RotationDirection};
+use crate::renderer_client::RendererClient;
 use crate::renderer_server::TurtleId;
 use crate::{Turtle, Color, Point, Speed};
 
@@ -39,32 +40,32 @@ impl AngleUnit {
     }
 }
 
-pub struct AsyncTurtle {
-    client: ProtocolClient,
+pub struct AsyncTurtle<R: RendererClient> {
+    client: ProtocolClient<R>,
     id: TurtleId,
     angle_unit: AngleUnit,
 }
 
-impl From<Turtle> for AsyncTurtle {
-    fn from(turtle: Turtle) -> Self {
+impl<R: RendererClient> From<Turtle<R>> for AsyncTurtle<R> {
+    fn from(turtle: Turtle<R>) -> Self {
         turtle.into_async()
     }
 }
 
-impl AsyncTurtle {
-    pub async fn new() -> Self {
+impl<R: RendererClient> AsyncTurtle<R> {
+    pub async fn new(renderer_client: R) -> Self {
         // This needs to be called as close to the start of the program as possible. We call it
         // here since Turtle::new() or AsyncTurtle::new() are commonly called at the beginning
         // of many programs that use the turtle crate.
         crate::start();
 
-        let client = ProtocolClient::new().await
+        let client = ProtocolClient::new(renderer_client).await
             .expect("unable to create renderer client");
         Self::with_client(client).await
     }
 
     /// Creates a new turtle using the given client
-    pub(crate) async fn with_client(client: ProtocolClient) -> Self {
+    pub(crate) async fn with_client(client: ProtocolClient<R>) -> Self {
         let id = client.create_turtle().await;
         let angle_unit = AngleUnit::Degrees;
 
@@ -123,7 +124,7 @@ impl AsyncTurtle {
             .await
     }
 
-    pub fn into_sync(self) -> Turtle {
+    pub fn into_sync(self) -> Turtle<R> {
         self.into()
     }
 

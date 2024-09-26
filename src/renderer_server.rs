@@ -18,7 +18,7 @@ cfg_if::cfg_if! {
     }
 }
 
-pub(crate) use app::TurtleId;
+pub use app::TurtleId;
 pub(crate) use backend::RendererServer;
 pub use renderer::export::ExportError;
 pub use start::start;

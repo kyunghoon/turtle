@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::sync::Arc;
 
 use ipc_channel::ipc::IpcError;
@@ -7,6 +8,12 @@ use thiserror::Error;
 
 use crate::ipc_protocol::{ClientSender, ConnectionError, ClientRequest, ServerResponse};
 use crate::renderer_server::RendererServer;
+
+pub trait RendererClient {
+    fn split(&self) -> impl Future<Output = Self>;
+    fn send(&self, req: ClientRequest);
+    fn recv(&self) -> impl Future<Output = ServerResponse>;
+}
 
 /// Signals that the IPC connection has been disconnected and therefore the window was probably
 /// closed
@@ -89,14 +96,14 @@ impl ClientDispatcher {
 
 /// Represents a single connection to the server
 #[derive(Debug)]
-pub struct RendererClient {
+pub struct DefaultRendererClient {
     dispatcher: Arc<ClientDispatcher>,
     id: ClientId,
     sender: ClientSender,
     receiver: Mutex<mpsc::UnboundedReceiver<Result<ServerResponse, Disconnected>>>,
 }
 
-impl RendererClient {
+impl DefaultRendererClient {
     /// Spawns a new server process and creates a connection to it
     pub async fn new() -> Result<Self, ConnectionError> {
         let (dispatcher, sender) = ClientDispatcher::new().await?;
@@ -106,9 +113,11 @@ impl RendererClient {
 
         Ok(Self {dispatcher, id, sender, receiver})
     }
+}
 
+impl RendererClient for DefaultRendererClient {
     /// Creates a new renderer client that can also communicate to the same server
-    pub async fn split(&self) -> Self {
+    async fn split(&self) -> Self {
         let dispatcher = self.dispatcher.clone();
         let (id, receiver) = dispatcher.add_client().await;
         let sender = self.sender.clone();
@@ -120,7 +129,7 @@ impl RendererClient {
     /// Sends a message to the server process
     ///
     /// When possible, prefer using methods from `ProtocolClient` instead of using this directly
-    pub fn send(&self, req: ClientRequest) {
+    fn send(&self, req: ClientRequest) {
         // The error produced by send is a serialization error, so it signals a bug in this code,
         // not something that should be propagated to be handled elsewhere.
         self.sender.send(self.id, req)
@@ -134,7 +143,7 @@ impl RendererClient {
     /// ensure that ordering or otherwise prevent multiple requests from being sent simultaneously.
     ///
     /// When possible, prefer using methods from `ProtocolClient` instead of using this directly
-    pub async fn recv(&self) -> ServerResponse {
+    async fn recv(&self) -> ServerResponse {
         let mut receiver = self.receiver.lock().await;
         receiver.recv().await
             // Since this struct keeps a ref-counted copy of the senders, they can't have possibly

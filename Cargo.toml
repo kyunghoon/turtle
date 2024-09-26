@@ -10,7 +10,7 @@ keywords = ["turtle", "graphics", "drawing", "teaching", "beginner"]
 # crates.io/category_slugs
 categories = ["rendering", "rendering::graphics-api", "rendering::engine", "games", "gui"]
 license = "MPL-2.0"
-edition = "2018"
+edition = "2021"
 
 # Make sure docs are always generated with the "unstable" feature activated
 [package.metadata.docs.rs]
@@ -43,7 +43,7 @@ pathfinder_gl = "0.5"
 glutin = "0.27"
 gl = "0.14"
 
-ipc-channel = "0.15"
+ipc-channel = "0.18"
 thiserror = "1.0"
 once_cell = "1.5"
 

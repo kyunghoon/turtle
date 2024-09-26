@@ -20,20 +20,19 @@ use super::{
 };
 
 /// A wrapper for `RendererClient` that encodes the the IPC protocol in a type-safe manner
-pub struct ProtocolClient {
-    client: RendererClient,
+pub struct ProtocolClient<R: RendererClient> {
+    client: R,
 }
 
-impl From<RendererClient> for ProtocolClient {
-    fn from(client: RendererClient) -> Self {
+impl<R: RendererClient> From<R> for ProtocolClient<R> {
+    fn from(client: R) -> Self {
         Self {client}
     }
 }
 
-impl ProtocolClient {
+impl<R: RendererClient> ProtocolClient<R> {
     /// Spawns a new server process and creates a connection to it
-    pub async fn new() -> Result<Self, ConnectionError> {
-        let client = RendererClient::new().await?;
+    pub async fn new(client: R) -> Result<Self, ConnectionError> {
         Ok(client.into())
     }
 

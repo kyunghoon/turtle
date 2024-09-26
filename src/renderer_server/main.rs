@@ -194,7 +194,7 @@ pub fn run_main(
                 WindowEvent::Resized(size) => {
                     let size = size.to_logical(scale_factor);
                     let mut app = app.write();
-                    let mut drawing = app.drawing_mut();
+                    let drawing = app.drawing_mut();
                     drawing.width = size.width;
                     drawing.height = size.height;
                 },
